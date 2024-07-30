@@ -9,7 +9,8 @@ export const s3 = new AWS.S3({
 
 export  const uploadToS3 =async (files) => {
 
- const uploadPromises = files.map((file) => {
+  const uploadPromises = files.map(async (file) => {
+    
    const params = {
      Bucket: process.env.AWS_BUCKET_NAME,
      Key: `${Date.now()}_${file.originalname}`,

@@ -4,17 +4,17 @@ const OrganisationSchema = new mongoose.Schema(
   {
     OrganizationName: {
       type: String,
-      required:true,
+      required: true,
       trim: true,
     },
     email: {
       type: String,
       required: true,
-      unique:true,
+      unique: true,
     },
     location: {
       type: String,
-      trim: true
+      trim: true,
     },
     password: {
       type: String,
@@ -23,15 +23,21 @@ const OrganisationSchema = new mongoose.Schema(
     users: [
       {
         type: mongoose.Schema.ObjectId,
-        ref:"users"
-      }
+        ref: "users",
+      },
     ],
     projects: [
       {
         type: mongoose.Schema.ObjectId,
-        ref:"projects"
-      }
-    ]
+        ref: "projects",
+      },
+    ],
+    scenes: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "Scene",
+      },
+    ],
   },
   { timestamps: true }
 );
