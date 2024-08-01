@@ -8,6 +8,7 @@ import config from "./src/config/config.js";
 import OrgRoutes from "./src/routes/orgRoutes.js";
 import projectRoutes from "./src/routes/projectRoutes.js";
 import SceneRoutes from "./src/routes/SceneRoutes.js";
+import ProductRoutes from "./src/routes/productRoutes.js";
 
 
 const app = express();
@@ -23,7 +24,7 @@ app.use("/api/user", authRoutes);
 app.use("/api/auth/org", OrgRoutes);
 app.use("/api/project", projectRoutes);
 app.use("/api/scene", SceneRoutes);
-
+app.use('/api/product',ProductRoutes)
 // Connect to MongoDB
 mongoose
   .connect(config.MONGODB_URI)

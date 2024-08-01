@@ -1,11 +1,12 @@
 import fs from 'fs';
 import FormData from "form-data";
 import fetch from 'node-fetch'
-import { createSceneGraph } from "./Graphcontroller.js";
+import { createSceneGraph, getEmentsbysceneId } from "./Graphcontroller.js";
 import { Scene } from '../models/SceneModel.js';
 import { uploadToS3 } from '../middelewares/s3UploadMiddelware.js';
 import axios from 'axios';
 import { Org } from '../models/organizationModel.js';
+import { dbGraph } from '../db/db.js';
 
 
 export const createScene = async (req, res) => {
@@ -20,6 +21,7 @@ export const createScene = async (req, res) => {
       ImgUrl:image[0].url
     });
     await scene.save();
+    const sceneId = scene._id;
     const org = await Org.findById(req.id)
     org.scenes.push(scene._id)
 
@@ -29,7 +31,7 @@ export const createScene = async (req, res) => {
       graphDetails,
       ProjectType, spaceType,
       image[0].url,
-      scene._id
+      sceneId
     );
     
 
@@ -49,9 +51,16 @@ export const listScene = async (req, res) => {
   try {
     // Find projects based on organizationId
     const org = await Org.findById(orgId).populate('scenes');
-    console.log(org.scenes);
+    const { scenes } = org;
+    const data = [];
+  for (let scene of scenes) {
+    const elements = await dbGraph.queryNodeBysceneId(scene._id);
+    const dummy = scene.toObject();
+    dummy.elements = elements;
+    data.push(dummy);
+  }
 
-    res.status(200).json( org['scenes'] );
+    res.status(200).json( data );
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server Error" });
@@ -93,3 +102,18 @@ async function uploadImage(file) {
     }
 }
 
+
+export const getelementofScene = async (req, res) => {
+  const { sceneId } = req.params;
+
+  try {
+    // Find projects based on organizationId
+    const data = await dbGraph.queryNodeBysceneId(sceneId);
+   
+   
+    res.status(200).json(data);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server Error" });
+  }
+};

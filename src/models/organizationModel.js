@@ -38,6 +38,12 @@ const OrganisationSchema = new mongoose.Schema(
         ref: "Scene",
       },
     ],
+    products: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "products",
+      },
+    ],
   },
   { timestamps: true }
 );

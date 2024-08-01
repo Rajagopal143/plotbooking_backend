@@ -29,6 +29,24 @@ export default class Neo4jgraph {
     }
     return properties;
   }
+  async queryNodeBysceneId(id) {
+    const result = await this.queryWithParams(
+      `MATCH (n:Scene {sceneId: '${id}'})-[:Element]->(e)  RETURN e `
+    );
+
+    if (result.records.length === 0) {
+      return null; // No room found
+    }
+    const data = [];
+    await result.records.forEach((record) => {
+      data.push({
+        label: record.get("e")?.labels[0],
+        description: record.get("e")?.properties?.description,
+      });
+    });
+
+    return data;
+  }
   async getRoomByName(roomName) {
     try {
       const result = await this.queryWithParams(
@@ -206,50 +224,72 @@ RETURN p`;
     }
   }
   async createSceneNode(params) {
-    const { img, description, width, depth, unit } = params;
-     try {
-       let query = `MATCH (s:Scene {
+    const { img, description, width, depth, unit, sceneId } = params;
+    try {
+      let query = `MATCH (s:Scene {
   img: '${img}',
   description: '${description}',
   width: ${width},
   depth: ${depth},
-  unit: '${unit}'
+  unit: '${unit}',
+  sceneId:'${sceneId}'
 }) RETURN s`;
-       let result = await this.query(query);
-       if (result.records.length == 0) {
-         query = `CREATE (s:Scene {
-  img: '${img}',
-  description: '${description}',
-  width: ${width},
-  depth: ${depth},
-  unit: '${unit}'
-}) RETURN s`;
-         result = await this.query(query);
-       }
+      let result = await this.query(query);
+      if (result?.records?.length == 0) {
+        query = `CREATE (s:Scene {
+    img: '${img}',
+    description: '${description}',
+    width: ${width},
+    depth: ${depth},
+    unit: '${unit}',
+    sceneId:'${sceneId}'
+    }) RETURN s`;
+        result = await this.query(query);
+      }
+      console.log(result);
 
-       return result?.records[0].get("s").identity?.low;
-     } catch (err) {
-       return err;
-     }
+      return result?.records[0].get("s").identity?.low;
+    } catch (err) {
+      return err;
+    }
   }
-  async createElementNode(params) {
-    const { label, description } = params;
-     try {
-       let query = `MATCH (s:${label} {
-  description: '${description}'
+  async createElementNode(params, sceneNode) {
+    const { label, description, type } = params;
+    try {
+      let query = `MATCH (s:${label} {
+  description: '${description}',
+  type: '${type}'
 }) RETURN s`;
-       let result = await this.query(query);
-       if (result.records.length == 0) {
-         query = `CREATE (s:${label} {
-  description: '${description}'
+      let result = await this.query(query);
+      if (result.records.length == 0) {
+        query = `CREATE (s:${label} {
+  description: '${description}',
+    type: '${type}'
 }) RETURN s`;
-         result = await this.query(query);
-       }
-
-       return result?.records[0].get("s").identity?.low;
-     } catch (err) {
-       return err;
+        result = await this.query(query);
+      }
+      const id = result?.records[0].get("s").identity?.low;
+      
+      if (type == 'Space') {
+        let query = ` MATCH (a: { id: ${sceneNode} }), (b: { id: ${id} })
+  MERGE (a)-[:space]->(b)
+  RETURN a, b`;
+        const run = await this.query(query);
      }
+
+      return result?.records[0].get("s").identity?.low;
+    } catch (err) {
+      return err;
+    }
+  }
+  async relationshipByLabel(start, end, relation) {
+    const query = `
+        MATCH (a:${start}),(b:${end})
+        MERGE  (a)-[:${relation}]->(b)
+        RETURN a, b
+        `;
+    let result = await this.query(query);
+    return result;
   }
   async createRoom(label, properties) {
     const session = this.db.session({ database: this.databaseName });
@@ -288,7 +328,6 @@ RETURN p`;
   async getNodeByProjectName(label) {
     try {
       let result = await this.query(`MATCH (r:${label}) RETURN r`);
-      console.log(result)
       if (result?.records?.length === 0) {
         result = await this.query(`CREATE (r:${label}) RETURN r`);
       }
@@ -308,8 +347,7 @@ WHERE ID(s) = ${Id}
 MATCH (s)-[:Space]->(n:${spacetype})
 RETURN n`;
       let result = await this.query(query);
-      console.log(result)
-        if (result?.records?.length ==0) {
+      if (result?.records?.length == 0) {
         query = `MATCH (s)
 WHERE ID(s) = ${Id}
 CREATE (s)-[:Space]->(n:${spacetype})
